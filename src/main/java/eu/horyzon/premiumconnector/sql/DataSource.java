@@ -15,8 +15,7 @@ public class DataSource {
 	private String table;
 	private HikariDataSource hikari;
 
-	public DataSource(PremiumConnector plugin, String driver, String host, int port, String user, String password,
-			String database, String table, boolean useSSL) throws SQLException {
+	public DataSource(PremiumConnector plugin, String driver, String host, int port, String user, String password, String database, String table, boolean useSSL) throws SQLException {
 		this.table = table;
 
 		HikariConfig config = new HikariConfig();
@@ -29,8 +28,7 @@ public class DataSource {
 			jdbcUrl += "sqlite://" + database;
 			config.setMaximumPoolSize(1);
 		} else {
-			jdbcUrl += (config.getDriverClassName().contains("mariadb") ? "mariadb" : "mysql") + "://" + host + ':'
-					+ port + '/' + database;
+			jdbcUrl += (config.getDriverClassName().contains("mariadb") ? "mariadb" : "mysql") + "://" + host + ':' + port + '/' + database;
 			plugin.getLogger().fine("Configuring jdbc url to " + jdbcUrl);
 
 			config.setUsername(user);
@@ -48,7 +46,7 @@ public class DataSource {
 		initDatabase();
 	}
 
-	public Connection getConnection() throws SQLException {
+	private Connection getConnection() throws SQLException {
 		return hikari.getConnection();
 	}
 

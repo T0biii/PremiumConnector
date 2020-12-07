@@ -47,63 +47,68 @@ public class PremiumConnector extends Plugin {
 		if (!getDataFolder().exists())
 			getDataFolder().mkdir();
 
+		Configuration config;
 		try {
-			Configuration config = loadConfiguration(getDataFolder(), "config.yml");
-
-			getLogger().setLevel(Level.parse(config.getString("debug", "INFO")));
-			getLogger().info("Debug level set to " + getLogger().getLevel());
-
-			floodgate = getProxy().getPluginManager().getPlugin("floodgate") != null;
-			crackedServer = getProxy().getServerInfo(config.getString("authServer"));
-			if (crackedServer == null) {
-				getLogger().warning("Please provide a correct cracked server name in the configuration file.");
-				return;
-			}
-
-			secondAttempt = config.getBoolean("secondAttempt", true);
-			// Initialize MojangResolver
-			resolver = new MojangResolver();
-
-			// Setup Database
-			Configuration configBackend = config.getSection("backend");
-			try {
-				source = new DataSource(this, configBackend.getString("driver"), configBackend.getString("host"), configBackend.getInt("port", 3306), configBackend.getString("user"), configBackend.getString("password"), configBackend.getString("database"), configBackend.getString("table"), configBackend.getBoolean("useSSL", true));
-			} catch (SQLException exception) {
-				exception.printStackTrace();
-				getLogger().warning("Please configure your database informations.");
-				return;
-			}
-
-			Message.setup(loadConfiguration(getDataFolder(), "message.yml"));
-
-			getProxy().getPluginManager().registerCommand(this, new PremiumCommand(this, config.getInt("timeToConfirm", 30)));
-			getProxy().getPluginManager().registerListener(this, new PreLoginListener(this));
-			getProxy().getPluginManager().registerListener(this, new ServerConnectListener(this));
-			if (getProxy().getPluginManager().getPlugin("LockLogin") != null) {
-				Module module = new LockLoginListener(this);
-
-				/*
-				 * ModuleLoader package depends on what platform are you in, if you are in bungee, use ml.karmaconfigs.lockloginmodules.bungee but if you are in spigot, use
-				 * ml.karmaconfigs.lockloginmodules.spigot
-				 */
-				ModuleLoader loader = new ModuleLoader(module);
-
-				//Check if the module is already loaded
-				try {
-					loader.inject();
-				} catch (IOException | NoJarException | NoPluginException ex) {
-					ex.printStackTrace();
-				}
-
-				getProxy().getPluginManager().registerListener(this, new LockLoginListener(this));
-				getLogger().info("LockLogin hook enabled.");
-			} else {
-				getProxy().getPluginManager().registerListener(this, new MessageChannelListener(this));
-				getLogger().info("AuthMe hook enabled.");
-			}
+			config = loadConfiguration(getDataFolder(), "config.yml");
 		} catch (IOException exception) {
 			exception.printStackTrace();
 			getLogger().warning("Error on loading configuration file...");
+			return;
+		}
+
+		try {
+			Message.setup(loadConfiguration(getDataFolder(), "message.yml"));
+		} catch (IOException exception) {
+			exception.printStackTrace();
+			getLogger().warning("Error on loading message file...");
+			return;
+		}
+
+		getLogger().setLevel(Level.parse(config.getString("debug", "INFO")));
+		getLogger().info("Debug level set to " + getLogger().getLevel());
+
+		floodgate = getProxy().getPluginManager().getPlugin("floodgate") != null;
+		crackedServer = getProxy().getServerInfo(config.getString("authServer"));
+		if (crackedServer == null) {
+			getLogger().warning("Please provide a correct cracked server name in the configuration file.");
+			return;
+		}
+
+		secondAttempt = config.getBoolean("secondAttempt", true);
+		// Initialize MojangResolver
+		resolver = new MojangResolver();
+
+		// Setup Database
+		Configuration configBackend = config.getSection("backend");
+		try {
+			source = new DataSource(this, configBackend.getString("driver"), configBackend.getString("host"), configBackend.getInt("port", 3306), configBackend.getString("user"), configBackend.getString("password"), configBackend.getString("database"), configBackend.getString("table"), configBackend.getBoolean("useSSL", true));
+		} catch (RuntimeException | SQLException exception) {
+			if (exception instanceof RuntimeException && configBackend.getString("driver").contains("sqlite"))
+				getLogger().warning("Bungeecord don't support SQLite per default.\r\nIf you want to use SQLite, you need to install the driver yourself\r\nEasy way : https://www.spigotmc.org/resources/sqlite-for-bungeecord.57191/\r\nHard way : https://gist.github.com/games647/d2a57abf90f707c0bd1107e432c580f3");
+			else
+				getLogger().warning("Please configure your database informations.");
+
+			exception.printStackTrace();
+			return;
+		}
+
+		getProxy().getPluginManager().registerCommand(this, new PremiumCommand(this, config.getInt("timeToConfirm", 30)));
+		getProxy().getPluginManager().registerListener(this, new PreLoginListener(this));
+		getProxy().getPluginManager().registerListener(this, new ServerConnectListener(this));
+		if (getProxy().getPluginManager().getPlugin("LockLogin") != null) {
+			Module module = new LockLoginListener(this);
+			ModuleLoader loader = new ModuleLoader(module);
+			try {
+				loader.inject();
+			} catch (IOException | NoJarException | NoPluginException exception) {
+				exception.printStackTrace();
+			}
+
+			getProxy().getPluginManager().registerListener(this, new LockLoginListener(this));
+			getLogger().info("LockLogin hook enabled.");
+		} else {
+			getProxy().getPluginManager().registerListener(this, new MessageChannelListener(this));
+			getLogger().info("AuthMe hook enabled.");
 		}
 	}
 
