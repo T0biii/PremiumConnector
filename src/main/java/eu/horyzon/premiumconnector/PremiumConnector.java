@@ -19,10 +19,6 @@ import eu.horyzon.premiumconnector.listeners.PreLoginListener;
 import eu.horyzon.premiumconnector.listeners.ServerConnectListener;
 import eu.horyzon.premiumconnector.session.PlayerSession;
 import eu.horyzon.premiumconnector.sql.DataSource;
-import ml.karmaconfigs.lockloginmodules.bungee.Module;
-import ml.karmaconfigs.lockloginmodules.bungee.ModuleLoader;
-import ml.karmaconfigs.lockloginmodules.shared.NoJarException;
-import ml.karmaconfigs.lockloginmodules.shared.NoPluginException;
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.config.Configuration;
@@ -92,16 +88,15 @@ public class PremiumConnector extends Plugin {
 			return;
 		}
 
-		getProxy().getPluginManager().registerCommand(this, new PremiumCommand(this, config.getInt("timeToConfirm", 30)));
-		getProxy().getPluginManager().registerListener(this, new PreLoginListener(this));
-		getProxy().getPluginManager().registerListener(this, new ServerConnectListener(this));
-		if (getProxy().getPluginManager().getPlugin("LockLogin") != null) {
-			Module module = new LockLoginListener(this);
-			ModuleLoader loader = new ModuleLoader(module);
-			try {
-				loader.inject();
-			} catch (IOException | NoJarException | NoPluginException exception) {
-				exception.printStackTrace();
+			getProxy().getPluginManager().registerCommand(this, new PremiumCommand(this, config.getInt("timeToConfirm", 30)));
+			getProxy().getPluginManager().registerListener(this, new PreLoginListener(this));
+			getProxy().getPluginManager().registerListener(this, new ServerConnectListener(this));
+			if (getProxy().getPluginManager().getPlugin("LockLogin") != null) {
+				getProxy().getPluginManager().registerListener(this, new LockLoginListener(this));
+				getLogger().info("LockLogin hook enabled.");
+			} else {
+				getProxy().getPluginManager().registerListener(this, new MessageChannelListener(this));
+				getLogger().info("AuthMe hook enabled.");
 			}
 
 			getProxy().getPluginManager().registerListener(this, new LockLoginListener(this));
